@@ -53,29 +53,29 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserRequest userRequest) {
-        // Check if email is already in use
+        // Verifica se o email já está em uso
         if (userRepository.existsByEmail(userRequest.getEmail())) {
             throw new RuntimeException("Error: Email is already in use!");
         }
 
-        // Create new user
+        // Cria um novo usuário
         User user = new User();
         user.setFirstName(userRequest.getFirstName());
         user.setLastName(userRequest.getLastName());
         user.setEmail(userRequest.getEmail());
         user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         
-        // Set humor if provided
+        // Define o humor se fornecido
         if (userRequest.getHumor() != null) {
             user.setHumor(EHumor.fromCodigo(userRequest.getHumor()));
         }
         
-        // Set humor description if provided
+        // Define a descrição do humor se fornecida
         if (userRequest.getHumorDescricao() != null) {
             user.setHumorDescricao(userRequest.getHumorDescricao());
         }
         
-        // Set roles
+        // Define as permissões do usuário
         Set<Role> roles = new HashSet<>();
         if (userRequest.getRoles() == null || userRequest.getRoles().isEmpty()) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
@@ -105,7 +105,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
-        // Update user fields
+        // Atualiza os campos do usuário
         if (userRequest.getFirstName() != null) {
             user.setFirstName(userRequest.getFirstName());
         }
@@ -122,27 +122,26 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         }
         
-        // Update humor if provided
-        // Update humor if provided
+        // Atualiza o humor se fornecido
         if (userRequest.getHumor() != null) {
             EHumor novoHumor = EHumor.fromCodigo(userRequest.getHumor());
             user.setHumor(novoHumor);
             
-            // Envia mensagem para a fila quando o humor é atualizado
+            // Envia notificação de atualização de humor
             if (userRequest.getHumorDescricao() != null) {
                 sendHumorUpdate(user, novoHumor, userRequest.getHumorDescricao());
             } else {
                 sendHumorUpdate(user, novoHumor, "");
             }
         } else if (userRequest.getHumorDescricao() != null) {
-            // Se apenas a descrição for fornecida, mantém o humor atual ou usa um padrão
+            // Atualiza apenas a descrição mantendo o humor atual
             if (user.getHumor() == null) {
                 user.setHumor(EHumor.NEUTRO);
             }
             sendHumorUpdate(user, user.getHumor(), userRequest.getHumorDescricao());
         }
         
-        // Update roles if provided
+        // Atualiza as permissões se fornecidas
         if (userRequest.getRoles() != null && !userRequest.getRoles().isEmpty()) {
             Set<Role> roles = new HashSet<>();
             userRequest.getRoles().forEach(role -> {
@@ -192,7 +191,7 @@ public class UserService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet()));
                 
-        // Set humor and humor description
+        // Define o humor e descrição na resposta
         if (user.getHumor() != null) {
             response.setHumor(user.getHumor().name());
             response.setHumorDescricao(user.getHumorDescricao());
