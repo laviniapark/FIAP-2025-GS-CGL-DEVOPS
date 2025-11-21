@@ -21,7 +21,7 @@ public class AppConfig {
                                          UserRepository userRepository,
                                          PasswordEncoder passwordEncoder) {
         return args -> {
-            // Create roles if they don't exist
+            // Cria as permissões se elas não existirem
             if (roleRepository.count() == 0) {
                 Role adminRole = new Role();
                 adminRole.setName(ERole.ROLE_ADMIN);
@@ -32,7 +32,7 @@ public class AppConfig {
                 roleRepository.save(userRole);
             }
 
-            // Create admin user if not exists
+            // Cria o usuário admin se não existir
             if (!userRepository.existsByEmail("admin@example.com")) {
                 User admin = new User();
                 admin.setFirstName("Admin");
@@ -42,7 +42,7 @@ public class AppConfig {
                 
                 Set<Role> roles = new HashSet<>();
                 Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                        .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                 roles.add(adminRole);
                 
                 admin.setRoles(roles);

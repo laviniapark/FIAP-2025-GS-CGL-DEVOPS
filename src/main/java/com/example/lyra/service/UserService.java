@@ -13,6 +13,11 @@ import com.example.lyra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,18 +49,29 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retorna todos os usuários com paginação
+     */
     @Transactional(readOnly = true)
+    public Page<UserResponse> getAllUsersPaginated(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(this::convertToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "users", key = "#id")
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + id));
         return convertToResponse(user);
     }
 
     @Transactional
+    @CacheEvict(value = "users", allEntries = true)
     public UserResponse createUser(UserRequest userRequest) {
         // Verifica se o email já está em uso
         if (userRepository.existsByEmail(userRequest.getEmail())) {
-            throw new RuntimeException("Error: Email is already in use!");
+            throw new RuntimeException("Erro: Email já está em uso!");
         }
 
         // Cria um novo usuário
@@ -79,17 +95,17 @@ public class UserService {
         Set<Role> roles = new HashSet<>();
         if (userRequest.getRoles() == null || userRequest.getRoles().isEmpty()) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
             roles.add(userRole);
         } else {
             userRequest.getRoles().forEach(role -> {
                 if ("admin".equals(role)) {
                     Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                     roles.add(adminRole);
                 } else {
                     Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                     roles.add(userRole);
                 }
             });
@@ -101,9 +117,10 @@ public class UserService {
     }
 
     @Transactional
+    @CachePut(value = "users", key = "#id")
     public UserResponse updateUser(Long id, UserRequest userRequest) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + id));
         
         // Atualiza os campos do usuário
         if (userRequest.getFirstName() != null) {
@@ -114,7 +131,7 @@ public class UserService {
         }
         if (userRequest.getEmail() != null && !userRequest.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(userRequest.getEmail())) {
-                throw new RuntimeException("Error: Email is already in use!");
+                throw new RuntimeException("Erro: Email já está em uso!");
             }
             user.setEmail(userRequest.getEmail());
         }
@@ -147,11 +164,11 @@ public class UserService {
             userRequest.getRoles().forEach(role -> {
                 if ("admin".equals(role)) {
                     Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                     roles.add(adminRole);
                 } else {
                     Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                     roles.add(userRole);
                 }
             });
@@ -163,9 +180,10 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#id")
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+            throw new ResourceNotFoundException("Usuário não encontrado com id: " + id);
         }
         userRepository.deleteById(id);
     }

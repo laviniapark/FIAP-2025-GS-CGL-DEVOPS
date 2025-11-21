@@ -5,6 +5,9 @@ import com.example.lyra.dto.response.MessageResponse;
 import com.example.lyra.dto.response.UserResponse;
 import com.example.lyra.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +29,20 @@ public class UserController {
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    /**
+     * Retorna todos os usuários com paginação
+     * @param page Número da página (padrão: 0)
+     * @param size Tamanho da página (padrão: 10)
+     */
+    @GetMapping("/paginated")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<Page<UserResponse>> getAllUsersPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(userService.getAllUsersPaginated(pageable));
     }
 
     @GetMapping("/{id}")
@@ -53,6 +70,6 @@ public class UserController {
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<MessageResponse> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return ResponseEntity.ok(new MessageResponse("User deleted successfully!"));
+        return ResponseEntity.ok(new MessageResponse("Usuário deletado com sucesso!"));
     }
 }

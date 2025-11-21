@@ -64,10 +64,10 @@ public class AuthService {
 
     public MessageResponse registerUser(SignupRequest signUpRequest) {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return new MessageResponse("Error: Email is already in use!");
+            return new MessageResponse("Erro: Email já está em uso!");
         }
 
-        // Create new user's account
+        // Cria uma nova conta de usuário
         User user = new User();
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
@@ -79,19 +79,19 @@ public class AuthService {
 
         if (strRoles == null) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
             roles.add(userRole);
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                         roles.add(adminRole);
                         break;
                     default:
                         Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erro: Permissão não encontrada."));
                         roles.add(userRole);
                 }
             });
@@ -100,6 +100,6 @@ public class AuthService {
         user.setRoles(roles);
         userRepository.save(user);
 
-        return new MessageResponse("User registered successfully!");
+        return new MessageResponse("Usuário registrado com sucesso!");
     }
 }
