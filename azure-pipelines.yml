@@ -135,6 +135,13 @@ stages:
                     azureSubscription: $(azureSubscription)
                     appName: $(webAppName)
                     containers: "lyrags2025acr.azurecr.io/$(repositoryName):latest"
+
+                - task: AzureAppServiceSettings@1
+                  displayName: "Set WebApp Config Variables"
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    resourceGroupName: $(resourceGroup)
+                    appName: $(webAppName)
                     appSettings: |
                       [
                         {"name": "GEMINI_API_KEY", "value": "$(GEMINI_API_KEY)", "slotSetting": false},
