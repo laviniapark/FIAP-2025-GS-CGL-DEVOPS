@@ -135,3 +135,12 @@ stages:
                     azureSubscription: $(azureSubscription)
                     appName: $(webAppName)
                     containers: "lyrags2025acr.azurecr.io/$(repositoryName):latest"
+                    appSettings: |
+                      [
+                        {"name": "GEMINI_API_KEY", "value": "$(GEMINI_API_KEY)", "slotSetting": false},
+                        {"name": "RABBITMQ_ADDRESS", "value": "$(ADDRESS)"},
+                        {"name": "RABBITMQ_VHOST", "value": "$(VHOST)"},
+                        {"name": "RABBITMQ_USERNAME", "value": "$(R_USER)"},
+                        {"name": "RABBITMQ_PASSWORD", "value": "$(R_PASS)"},
+                        {"name": "RABBITMQ_PORT", "value": "$(PORT)"}
+                      ]

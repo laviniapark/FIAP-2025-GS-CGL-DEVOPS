@@ -8,11 +8,6 @@ DBNAME="lyradb"
 APP_SERVICE_PLAN="plan-gs2025-lyra"
 WEBAPP_NAME="lyrags2025webapp"
 IMAGE_NAME="lyra-java"
-ADDRESS="amqps://mjisbxuw:sTblR25C1L15M997mBnSqFwamsuAaqqz@fly.rmq.cloudamqp.com/mjisbxuw"
-VHOST="mjisbxuw"
-R_USER="mjisbxuw:mjisbxuw"
-R_PASS="sTblR25C1L15M997mBnSqFwamsuAaqqz"
-PORT="5672"
 
 # Resource Group nao criado pois ja existe (criado na materia de .NET)
 
@@ -59,9 +54,4 @@ az webapp config appsettings set \
     ACTIVE_PROFILE=prod \
     DB_URL="jdbc:sqlserver://${SERVER_NAME}.database.windows.net:1433;database=${DBNAME};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;" \
     DB_USERNAME=$USERNAME \
-    DB_PASSWORD=$PASSWORD \
-    RABBITMQ_ADDRESS=$ADDRESS \
-    RABBITMQ_VHOST=$VHOST \
-    RABBITMQ_USERNAME=$R_USER \
-    RABBITMQ_PASSWORD=$R_PASS \
-    RABBITMQ_PORT=$PORT
+    DB_PASSWORD=$PASSWORD
