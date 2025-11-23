@@ -1,0 +1,137 @@
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  MAVEN_OPTS: "-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)"
+
+  azureSubscription: "037da695-b620-4bf9-bd94-375627fd8525"
+
+  containerRegistry: "lyraacrconnection"
+  repositoryName: "javaapi"
+
+  webAppName: "lyrags2025webapp"
+  aciName: "lyrags2025aci"
+  resourceGroup: "rg-gs2025-cgl"
+  location: "eastus2"
+
+stages:
+  - stage: Build
+    displayName: "Build stage"
+    jobs:
+      - job: Maven_Build
+        displayName: "Maven Package"
+        container: maven:3.9.11-eclipse-temurin-17-noble
+        steps:
+          - task: Cache@2
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+            displayName: "Cache Maven local repo"
+
+          - task: Maven@4
+            inputs:
+              mavenPomFile: "pom.xml"
+              goals: "clean package -DskipTests"
+              publishJUnitResults: true
+              mavenOptions: "-Xmx3072m $(MAVEN_OPTS)"
+              options: '-D"spring.profiles.active=test"'
+              testResultsFiles: "**/surefire-reports/TEST-*.xml"
+
+          - task: CopyFiles@2
+            displayName: "Copy Files to artifact staging directory"
+            inputs:
+              SourceFolder: "$(System.DefaultWorkingDirectory)"
+              Contents: "**/target/*.jar"
+              TargetFolder: "$(Build.ArtifactStagingDirectory)"
+
+          - publish: $(Build.ArtifactStagingDirectory)
+            artifact: drop
+
+
+  - stage: Docker
+    displayName: "Build and Push Docker Image"
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: Docker_Build_Push
+        displayName: "Build and Push Image to ACR"
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: Docker@2
+            inputs:
+              command: login
+              containerRegistry: $(containerRegistry)
+
+          - task: Docker@2
+            displayName: "Build and Push"
+            inputs:
+              command: buildAndPush
+              repository: $(repositoryName)
+              containerRegistry: $(containerRegistry)
+              dockerfile: "**/Dockerfile"
+              tags: |
+                latest
+                $(Build.BuildId)
+
+
+  - stage: Deploy
+    displayName: "Deploy to Azure"
+    dependsOn: Docker
+    condition: succeeded()
+    jobs:
+      - job: Deploy_ACI
+        displayName: "Deploy to Azure Container Instance"
+        steps:
+          - task: AzureCLI@2
+            displayName: "Deploy ACI"
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az container create -g $(resourceGroup) \
+                  -n $(aciName) \
+                  --image lyrags2025acr.azurecr.io/$(repositoryName):latest \
+                  --ports 8080 \
+                  --cpu 1 \
+                  --memory 2 \
+                  --os-type Linux \
+                  --ip-address Public \
+                  --registry-login-server lyrags2025acr.azurecr.io \
+                  --registry-username $(ACR_USERNAME) \
+                  --registry-password $(ACR_PASSWORD) \
+                  --location $(location) \
+                  --restart-policy Always \
+                  --environment-variables \
+                    SPRING_PROFILES_ACTIVE=prod \
+                    DB_URL=$(DB_URL) \
+                    DB_USERNAME=$(DB_USERNAME) \
+                    DB_PASSWORD=$(DB_PASSWORD) \
+                    RABBITMQ_ADDRESS=$(ADDRESS) \
+                    RABBITMQ_VHOST=$(VHOST) \
+                    RABBITMQ_USERNAME=$(R_USER) \
+                    RABBITMQ_PASSWORD=$(R_PASS) \
+                    RABBITMQ_PORT=$(PORT)
+
+
+      - deployment: Deploy_WebApp
+        displayName: "Deploy Web App from Container"
+        environment: Production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebAppContainer@1
+                  displayName: "Azure Web App on Container Deploy"
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    appName: $(webAppName)
+                    containers: "lyrags2025acr.azurecr.io/$(repositoryName):latest"
