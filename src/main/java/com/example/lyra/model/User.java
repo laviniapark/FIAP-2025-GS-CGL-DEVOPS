@@ -53,4 +53,10 @@ public class User {
 
     @Column(length = 500)
     private String humorDescricao;
+
+    @Column(name = "sono")
+    private Integer sono;
+
+    @Column(name = "hidratacao")
+    private Integer hidratacao;
 }

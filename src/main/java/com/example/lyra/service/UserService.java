@@ -173,6 +173,63 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    @Transactional
+    public com.example.lyra.dto.response.DailyCheckInResponse saveDailyCheckIn(
+            Long userId,
+            com.example.lyra.dto.request.DailyCheckInRequest request) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + userId));
+
+        // Atualiza os dados do check-in diário
+        if (request.getHumor() != null) {
+            user.setHumor(EHumor.fromCodigo(request.getHumor()));
+        }
+
+        if (request.getSono() != null) {
+            user.setSono(request.getSono());
+        }
+
+        if (request.getHidratacao() != null) {
+            user.setHidratacao(request.getHidratacao());
+        }
+
+        User savedUser = userRepository.save(user);
+        return convertToDailyCheckInResponse(savedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public com.example.lyra.dto.response.DailyCheckInResponse getDailyCheckIn(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + userId));
+
+        return convertToDailyCheckInResponse(user);
+    }
+
+    private com.example.lyra.dto.response.DailyCheckInResponse convertToDailyCheckInResponse(User user) {
+        com.example.lyra.dto.response.DailyCheckInResponse response =
+                new com.example.lyra.dto.response.DailyCheckInResponse();
+
+        if (user.getHumor() != null) {
+            response.setHumor(user.getHumor().getCodigo());
+            response.setHumorDescricao(user.getHumor().getDescricao());
+        }
+
+        response.setSono(user.getSono());
+        response.setHidratacao(user.getHidratacao());
+
+        // Mensagem motivacional baseada na hidratação
+        if (user.getHidratacao() != null && user.getHidratacao() >= 8) {
+            response.setMensagem("🎉 Parabéns! Você já atingiu a meta mínima diária de água!");
+        } else if (user.getHidratacao() != null && user.getHidratacao() >= 5) {
+            response.setMensagem("💧 Você está no caminho certo! Continue se hidratando!");
+        } else if (user.getHidratacao() != null && user.getHidratacao() > 0) {
+            response.setMensagem("💪 Bom começo! Lembre-se de beber mais água ao longo do dia.");
+        }
+
+        return response;
+    }
+
     private UserResponse convertToResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
