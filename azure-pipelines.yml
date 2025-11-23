@@ -10,7 +10,7 @@ variables:
 
   azureSubscription: "037da695-b620-4bf9-bd94-375627fd8525"
 
-  containerRegistry: "lyraacrconnection"
+  containerRegistry: "lyraacrconn"
   repositoryName: "javaapi"
 
   webAppName: "lyrags2025webapp"
